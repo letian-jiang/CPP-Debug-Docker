@@ -1,6 +1,12 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 LABEL maintainer="Lei Mao <dukeleimao@gmail.com>"
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+RUN sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+RUN sed -i 's/ports.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 # Install necessary dependencies
 RUN apt-get update &&\
@@ -9,6 +15,7 @@ RUN apt-get update &&\
         autoconf \
         automake \
         libtool \
+        libssl-dev \
         pkg-config \
         apt-transport-https \
         ca-certificates \
@@ -27,10 +34,19 @@ RUN apt-get update &&\
     apt-get clean
 
 # Install CMake
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add - &&\
-    apt-add-repository "deb https://apt.kitware.com/ubuntu/ bionic main" &&\
-    apt-get update &&\
-    apt-get install -y cmake
+WORKDIR /root
+RUN mkdir temp
+WORKDIR /root/temp
+RUN curl -OL https://github.com/Kitware/CMake/releases/download/v3.27.4/cmake-3.27.4.tar.gz
+RUN tar -xzvf cmake-3.27.4.tar.gz
+
+WORKDIR /root/temp/cmake-3.27.4
+RUN ./bootstrap -- -DCMAKE_BUILD_TYPE:STRING=Release
+RUN make -j4
+RUN make install
+
+WORKDIR /root
+RUN rm -rf temp
 
 ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
